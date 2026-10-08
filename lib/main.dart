@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:awesome_toast/awesome_toast.dart';
+import 'package:staffpulseapp/core/services/app_toast.dart';
 import 'package:staffpulseapp/core/services/locator.dart';
 import 'package:staffpulseapp/core/services/router.dart';
 import 'package:staffpulseapp/core/services/theme.dart';
@@ -18,7 +20,12 @@ Future<void> main() async {
   // Setup service locator (GetIt, SharedPreferences, ApiClient, Repositories)
   await setupLocator();
 
-  runApp(const StaffPulseApp());
+  runApp(
+    ToastProvider(
+      config: AppToast.stackConfig,
+      child: const StaffPulseApp(),
+    ),
+  );
 }
 
 class StaffPulseApp extends StatelessWidget {

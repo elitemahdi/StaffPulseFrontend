@@ -4,9 +4,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:liquid_glass_easy/liquid_glass_easy.dart';
 import 'package:loading_icon_button/loading_icon_button.dart';
+import 'package:staffpulseapp/core/services/app_toast.dart';
 import 'package:staffpulseapp/core/services/locator.dart';
+import 'package:staffpulseapp/core/services/storage_service.dart';
 import 'package:staffpulseapp/core/services/theme.dart';
 import 'package:staffpulseapp/core/utils/bloc_states.dart';
+import 'package:staffpulseapp/core/widget/components/custom_orb_button.dart';
 import 'package:staffpulseapp/login/presentation/controller/login_bloc.dart';
 
 class LoginScreen extends StatelessWidget {
@@ -32,6 +35,26 @@ class _LoginContentState extends State<_LoginContent> {
   final TextEditingController _usernameController = TextEditingController(text: 'admin');
   final TextEditingController _passwordController = TextEditingController(text: '123456');
   final LoadingButtonController _buttonController = LoadingButtonController();
+  bool _rememberMe = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedCredentials();
+  }
+
+  void _loadSavedCredentials() {
+    final creds = locator<IStorageService>().getSavedCredentials();
+    if (creds.rememberMe) {
+      _rememberMe = true;
+      if (creds.username != null && creds.username!.isNotEmpty) {
+        _usernameController.text = creds.username!;
+      }
+      if (creds.password != null && creds.password!.isNotEmpty) {
+        _passwordController.text = creds.password!;
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -68,22 +91,17 @@ class _LoginContentState extends State<_LoginContent> {
           _buttonController.start();
         } else if (state.status is BlocStatusCompleted) {
           _buttonController.success();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: const Color(0xE630D158),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              content: const Row(
-                children: [
-                  Icon(Icons.check_circle_rounded, color: Colors.white),
-                  SizedBox(width: 12),
-                  Text(
-                    'ورود موفقیت‌آمیز بود. در حال انتقال...',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-            ),
+
+          // Save or clear credentials based on Remember Me checkbox
+          locator<IStorageService>().saveCredentials(
+            username: _usernameController.text.trim(),
+            password: _passwordController.text.trim(),
+            rememberMe: _rememberMe,
+          );
+
+          AppToast.success(
+            'ورود با موفقیت انجام شد. در حال انتقال به سامانه...',
+            title: 'خوش آمدید',
           );
           Future.delayed(const Duration(milliseconds: 700), () {
             if (context.mounted) {
@@ -92,6 +110,11 @@ class _LoginContentState extends State<_LoginContent> {
           });
         } else if (state.status is BlocStatusError) {
           _buttonController.error();
+          final errMessage = (state.status as BlocStatusError).message ?? 'خطا در احراز هویت';
+          AppToast.error(
+            errMessage,
+            title: 'خطای احراز هویت',
+          );
         }
       },
       builder: (context, state) {
@@ -205,63 +228,73 @@ class _LoginContentState extends State<_LoginContent> {
                                       },
                                     ),
                                   ),
-                                  const SizedBox(height: 26),
+                                  const SizedBox(height: 14),
 
-                                  // Apple Liquid Glass Button with LoadingIndicator.orb
-                                  LiquidGlassLens(
-                                    style: const LiquidGlassStyle(
-                                      shape: LiquidGlassShape.continuousRoundedRectangle(
-                                        cornerRadius: 18,
-                                      ),
-                                      appearance: LiquidGlassAppearance(
-                                        color: Color(0x550A84FF),
-                                      ),
-                                      refraction: LiquidGlassRefraction(distortion: 0.08),
-                                    ),
-                                    child: SizedBox(
-                                      height: 52,
-                                      child: LoadingButton(
-                                        controller: _buttonController,
-                                        type: ButtonType.elevated,
-                                        indicator: const LoadingIndicator.orb(
-                                          state: OrbState.working,
-                                          speed: 1.2,
-                                          color: Colors.white,
-                                        ),
-                                        loadingText: 'در حال بررسی هویت...',
-                                        successText: 'خوش آمدید!',
-                                        errorText: 'تلاش مجدد',
-                                        buttonStyle: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.transparent,
-                                          shadowColor: Colors.transparent,
+                                  // Remember Me Checkbox Row
+                                  Row(
+                                    children: [
+                                      SizedBox(
+                                        height: 22,
+                                        width: 22,
+                                        child: Checkbox(
+                                          value: _rememberMe,
+                                          activeColor: const Color(0xFF0A84FF),
+                                          checkColor: Colors.white,
                                           shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(18),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          side: BorderSide(
+                                            color: Colors.white.withValues(alpha: 0.4),
+                                            width: 1.5,
+                                          ),
+                                          onChanged: isLoading
+                                              ? null
+                                              : (val) {
+                                                  setState(() {
+                                                    _rememberMe = val ?? false;
+                                                  });
+                                                },
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      GestureDetector(
+                                        onTap: isLoading
+                                            ? null
+                                            : () {
+                                                setState(() {
+                                                  _rememberMe = !_rememberMe;
+                                                });
+                                              },
+                                        child: Text(
+                                          'ذخیره اطلاعات ورود (مرا به خاطر بسپار)',
+                                          style: TextStyle(
+                                            color: Colors.white.withValues(alpha: 0.8),
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w500,
                                           ),
                                         ),
-                                        onPressed: () async {
-                                          _submitLogin(context);
-                                        },
-                                        child: const Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Text(
-                                              'ورود به سامانه',
-                                              style: TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                            SizedBox(width: 8),
-                                            Icon(
-                                              Icons.arrow_back_rounded,
-                                              color: Colors.white,
-                                              size: 20,
-                                            ),
-                                          ],
-                                        ),
                                       ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 20),
+
+                                  // Apple Liquid Glass Button with ThinkingOrb Loading Component
+                                  CustomOrbButton(
+                                    controller: _buttonController,
+                                    text: 'ورود به سامانه',
+                                    loadingText: 'در حال بررسی هویت...',
+                                    successText: 'خوش آمدید!',
+                                    errorText: 'تلاش مجدد',
+                                    orbState: OrbState.working,
+                                    orbSize: 20,
+                                    trailingIcon: const Icon(
+                                      Icons.arrow_back_rounded,
+                                      color: Colors.white,
+                                      size: 20,
                                     ),
+                                    onPressed: () {
+                                      _submitLogin(context);
+                                    },
                                   ),
                                 ],
                               ),

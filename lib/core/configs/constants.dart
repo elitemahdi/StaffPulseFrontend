@@ -29,6 +29,9 @@ abstract class AppConstants {
   static const String storageTokenKey = 'staffpulse_access_token';
   static const String storageUserKey = 'staffpulse_user_session';
   static const String storageThemeKey = 'staffpulse_app_theme';
+  static const String storageRememberMeKey = 'staffpulse_remember_me';
+  static const String storageSavedUsernameKey = 'staffpulse_saved_username';
+  static const String storageSavedPasswordKey = 'staffpulse_saved_password';
 
   // API Endpoints
   static const String loginEndpoint = '/auth/login';
