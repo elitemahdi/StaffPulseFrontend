@@ -37,5 +37,6 @@ abstract class AppConstants {
   static const String loginEndpoint = '/auth/login';
   static const String meEndpoint = '/auth/me';
   static const String leaveSubmitEndpoint = '/leave/submit';
+  static const String leaveSubmitStreamEndpoint = '/leave/submit-stream';
   static const String pendingTasksEndpoint = '/leave/tasks/pending';
 }
